@@ -1,5 +1,15 @@
 # Uber Event Streaming — Azure Databricks Lakeflow pipeline
 
+## Real-world ride-hailing analytics (TLC + zones + weather)
+
+A **real-source batch analytics track** now complements the earlier synthetic streaming tests. It uses public NYC TLC High-Volume For-Hire trip Parquet (about 244M source rows for 2025), official taxi-zone lookup, and NYC historical weather. The Spark notebook validates source rows, quarantines malformed records, enriches zone and weather attributes, and reconciles zone/day Gold counts to valid trip input.
+
+- [Source downloader with size guards and SHA-256 provenance](real_data/README.md)
+- [Real TLC Spark Bronze/Silver/Gold notebook](notebooks/03_real_tlc_zones_weather.py)
+- [Offline source contract checks](tests/test_tlc_real_sources.py)
+
+**This is public data for multiple high-volume FHV providers, not proprietary Uber data.** Big source volume is not proof of a full 244M-row run. Monthly Parquet downloads can be large; manual size caps and workspace upload are required.
+
 > **2026 portfolio upgrade:** Source-controlled synthetic CDC replay, event validation, late-arrival handling, deterministic deduplication, quarantine metadata and testable replay metrics. Azure Event Hubs infrastructure is optional, billable and **not deployed**.
 
 ### Offline streaming-contract evidence
