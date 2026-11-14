@@ -1,81 +1,35 @@
-
+"""Event Hubs Kafka input; pipeline configuration must supply namespace and hub."""
 from pyspark import pipelines as dlt
-from pyspark.sql.functions import *
-from pyspark.sql.types import *
+from pyspark.sql import functions as F
 
-# ==========================================
-# 1. AZURE EVENT HUBS CONFIGURATION
-# ==========================================
+NAMESPACE = spark.conf.get("uber.eventhubs.namespace", "")
+EVENT_HUB = spark.conf.get("uber.eventhubs.name", "")
+MAX_OFFSETS = int(spark.conf.get("uber.eventhubs.max_offsets_per_trigger", "10000"))
+if not NAMESPACE or not EVENT_HUB:
+    raise ValueError("Set uber.eventhubs.namespace and uber.eventhubs.name in pipeline configuration")
+if MAX_OFFSETS < 1:
+    raise ValueError("max_offsets_per_trigger must be positive")
 
-EH_NAMESPACE = "event-uber-0000"
-EH_NAME = "ubertopic0000"
-
-EH_CONN_STR = dbutils.secrets.get(scope="uber-streaming", key="eh-connection-string")
-
-
-# ==========================================
-# 2. KAFKA CONSUMER CONFIGURATION
-# ==========================================
-
-KAFKA_OPTIONS = {
-    "kafka.bootstrap.servers":
-        f"{EH_NAMESPACE}.servicebus.windows.net:9093",
-
-    "subscribe": EH_NAME,
-
+CONNECTION = dbutils.secrets.get(scope="uber-streaming", key="eh-connection-string")
+OPTIONS = {
+    "kafka.bootstrap.servers": f"{NAMESPACE}.servicebus.windows.net:9093",
+    "subscribe": EVENT_HUB,
     "kafka.security.protocol": "SASL_SSL",
-
     "kafka.sasl.mechanism": "PLAIN",
-
     "kafka.sasl.jaas.config": (
         'kafkashaded.org.apache.kafka.common.security.plain.PlainLoginModule required '
         'username="$ConnectionString" '
-        f'password="{EH_CONN_STR}";'
+        f'password="{CONNECTION}";'
     ),
-
     "kafka.request.timeout.ms": "60000",
-
     "kafka.session.timeout.ms": "30000",
-
-    "maxOffsetsPerTrigger": "10000",
-
-    "failOnDataLoss": "false",
-
+    "maxOffsetsPerTrigger": str(MAX_OFFSETS),
+    "failOnDataLoss": "true",
     "startingOffsets": "earliest"
 }
 
-# ==========================================
-# 3. BRONZE LAYER - RAW RIDES
-# ==========================================
-
-@dlt.table(
-    name="rides_raw",
-    comment="Raw Uber ride events from Azure Event Hubs",
-    table_properties={
-        "quality": "bronze"
-    }
-)
+@dlt.table(name="rides_raw", comment="Raw ride events; Kafka envelope preserved", table_properties={"quality": "bronze"})
 def get_rides_raw():
-
-    df = (
-        spark.readStream
-        .format("kafka")
-        .options(**KAFKA_OPTIONS)
-        .load()
-    )
-
-    # Convert Kafka binary value into readable string
-    df = df.withColumn(
-        "rides",
-        col("value").cast("string")
-    )
-
-    # Convert Kafka binary key into readable string
-    df = df.withColumn(
-        "ride_key",
-        col("key").cast("string")
-    )
-
-    return df
-
-
+    return (spark.readStream.format("kafka").options(**OPTIONS).load()
+            .withColumn("rides", F.col("value").cast("string"))
+            .withColumn("ride_key", F.col("key").cast("string")))
