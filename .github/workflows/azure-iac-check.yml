@@ -1,0 +1,18 @@
+name: Validate Azure Bicep without deployment
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  bicep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile declarative infrastructure (no Azure login)
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az bicep version
+            az bicep build --file infra/azure/event_hubs.bicep --outfile /tmp/portfolio-infra.json
