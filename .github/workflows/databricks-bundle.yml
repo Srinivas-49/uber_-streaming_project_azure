@@ -1,0 +1,41 @@
+name: Databricks bundle - manual validate and deploy
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Deployment target
+        type: choice
+        required: true
+        default: dev
+        options: [dev, prod]
+      deploy:
+        description: Deploy after validation (may incur Azure charges)
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  validate_or_deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.target }}
+    env:
+      DATABRICKS_AUTH_TYPE: github-oidc
+      DATABRICKS_HOST: ${{ vars.DATABRICKS_HOST }}
+      DATABRICKS_CLIENT_ID: ${{ vars.DATABRICKS_CLIENT_ID }}
+      BUNDLE_VAR_catalog_name: ${{ vars.UC_CATALOG }}
+      BUNDLE_VAR_alert_email: ${{ vars.ALERT_EMAIL }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Python syntax (does not require a Databricks cluster)
+        run: python -m compileall -q uber_event_streaming/transformations benchmarks
+      - name: Set up Databricks CLI
+        uses: databricks/setup-cli@main
+      - name: Validate bundle
+        run: databricks bundle validate --target "${{ inputs.target }}"
+      - name: Deploy (only when explicitly requested)
+        if: ${{ inputs.deploy }}
+        run: databricks bundle deploy --target "${{ inputs.target }}"
