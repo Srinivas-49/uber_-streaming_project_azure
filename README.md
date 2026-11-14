@@ -1,5 +1,20 @@
 # Uber Event Streaming — Azure Databricks Lakeflow pipeline
 
+> **2026 portfolio upgrade:** Source-controlled synthetic CDC replay, event validation, late-arrival handling, deterministic deduplication, quarantine metadata and testable replay metrics. Azure Event Hubs infrastructure is optional, billable and **not deployed**.
+
+### Offline streaming-contract evidence
+
+    python -m scripts.run_replay_demo --rides 30
+    python -m unittest discover -s tests -v
+
+The local simulation exercises 39 synthetic event deliveries, duplicate events, an out-of-order change and malformed input. It preserves no real driver/passenger information. CI publishes a JSON artifact of replay metrics. **This is not a running Event Hubs consumer or proof of exactly-once Kafka semantics.**
+
+- [Streaming replay architecture and limitations](docs/STREAMING_REPLAY_AND_AZURE.md)
+- [Optional, manual-only Event Hubs Bicep](infra/azure/event_hubs.bicep)
+- [Original Azure Databricks Lakeflow transformations](uber_event_streaming/transformations)
+
+
+
 [![Azure Databricks](https://img.shields.io/badge/Azure-Databricks-FF3621)](https://azure.microsoft.com/products/databricks)
 [![Azure Event Hubs](https://img.shields.io/badge/Azure-Event%20Hubs-0078D4)](https://learn.microsoft.com/azure/event-hubs/)
 [![PySpark](https://img.shields.io/badge/Apache-Spark-E25A1C)](https://spark.apache.org/)
