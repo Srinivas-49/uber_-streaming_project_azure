@@ -77,6 +77,13 @@ def fetch_bundle(output, year=2025, month=1, *, max_megabytes=100,
         raise ValueError("Large downloads require --confirm-large")
     root = Path(output)
     root.mkdir(parents=True, exist_ok=True)
+    previous_file = root / "manifest.json"
+    if previous_file.is_file():
+        previous = json.loads(previous_file.read_text(encoding="utf-8"))
+        if (previous.get("year"), previous.get("month")) != (year, month):
+            raise ValueError("This landing directory belongs to another month; use a distinct output path")
+        validate_manifest(root)
+        return previous
     datasets = {
         "trips": (trip_url(year, month), root / f"fhvhv_tripdata_{year}-{month:02d}.parquet"),
         "zones": (ZONE_URL, root / "taxi_zone_lookup.csv"),
