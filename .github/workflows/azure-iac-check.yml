@@ -14,5 +14,6 @@ jobs:
         uses: azure/cli@v2
         with:
           inlineScript: |
+            az bicep install
             az bicep version
             az bicep build --file infra/azure/event_hubs.bicep --outfile /tmp/portfolio-infra.json
