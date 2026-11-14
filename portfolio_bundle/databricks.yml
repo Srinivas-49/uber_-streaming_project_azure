@@ -1,0 +1,43 @@
+bundle:
+  name: uber-synthetic-portfolio
+
+# Sync the parent repository so the actual notebooks, not duplicated copies,
+# are uploaded. Existing root databricks.yml targets the *separate* paid
+# Azure Event Hubs / Lakeflow workload and is NOT used for this offline demo.
+sync:
+  paths:
+    - ..
+
+resources:
+  jobs:
+    uber_synthetic_quality:
+      name: uber-synthetic-quality-${bundle.target}
+      description: "Synthetic ride events, quality quarantine, CDC and Gold analytics."
+      max_concurrent_runs: 1
+      schedule:
+        quartz_cron_expression: "0 0 10 * * ?"
+        timezone_id: "UTC"
+        pause_status: PAUSED
+      tasks:
+        - task_key: bootstrap
+          notebook_task:
+            notebook_path: ../deployment/00_bootstrap_workspace.py
+        - task_key: bronze_events
+          depends_on:
+            - task_key: bootstrap
+          notebook_task:
+            notebook_path: ../notebooks/01_generate_synthetic_rides.py
+        - task_key: cdc_and_gold
+          depends_on:
+            - task_key: bronze_events
+          notebook_task:
+            notebook_path: ../notebooks/02_cdc_quality_gold.py
+        - task_key: validate
+          depends_on:
+            - task_key: cdc_and_gold
+          notebook_task:
+            notebook_path: ../deployment/90_validate_uber.py
+targets:
+  dev:
+    default: true
+    mode: development
