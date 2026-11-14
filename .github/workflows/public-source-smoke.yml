@@ -1,0 +1,24 @@
+name: Real public source smoke (bounded)
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  real_source_smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Fetch a bounded public dataset sample
+        run: |
+          python -c "from scripts.fetch_tlc_public import save_url, ZONE_URL; print(save_url(ZONE_URL, 'public-smoke/taxi_zone_lookup.csv', max_bytes=2097152))"
+      - name: Retain real-source sample and provenance
+        uses: actions/upload-artifact@v4
+        with:
+          name: tlc-official-zone-lookup-sample
+          path: public-smoke/**
+          retention-days: 7
