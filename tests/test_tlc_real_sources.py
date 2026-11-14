@@ -34,3 +34,17 @@ def test_safety_controls(tmp_path):
         fetch_bundle(tmp_path, max_megabytes=999, downloader=lambda *args, **kwargs: {})
     with pytest.raises(ValueError, match="Unapproved"):
         download("https://example.com/file", tmp_path / "a")
+
+def test_replay_uses_verified_manifest_and_rejects_mixed_months(tmp_path):
+    calls = []
+    def fake_download(url, target, *, max_bytes):
+        calls.append(url)
+        payload = url.encode("utf-8")
+        Path(target).write_bytes(payload)
+        return {"url": url, "filename": Path(target).name,
+                "bytes": len(payload), "sha256": hashlib.sha256(payload).hexdigest()}
+    first = fetch_bundle(tmp_path, 2025, 1, downloader=fake_download)
+    assert fetch_bundle(tmp_path, 2025, 1, downloader=fake_download) == first
+    assert len(calls) == 3  # no repeat large Parquet transfer
+    with pytest.raises(ValueError, match="another month"):
+        fetch_bundle(tmp_path, 2025, 2, downloader=fake_download)
