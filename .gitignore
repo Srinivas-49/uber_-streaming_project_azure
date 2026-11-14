@@ -1,0 +1,9 @@
+# Large raw datasets, cached files and credentials
+real-data/
+*.partial
+*.parquet
+.env
+.env.*
+__pycache__/
+.pytest_cache/
+.databricks/
