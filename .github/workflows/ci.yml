@@ -26,3 +26,13 @@ jobs:
           SPARK_LOCAL_IP: 127.0.0.1
           PYSPARK_PYTHON: python
         run: python -m unittest discover -s tests -v
+      - name: Run synthetic CDC replay demonstration
+        env:
+          PYTHONPATH: .
+        run: python -m scripts.run_replay_demo --rides 30 > replay-evidence.json
+      - name: Preserve CDC replay metrics
+        uses: actions/upload-artifact@v4
+        with:
+          name: uber-synthetic-replay-evidence
+          path: replay-evidence.json
+          retention-days: 7
